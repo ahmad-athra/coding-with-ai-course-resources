@@ -21,11 +21,19 @@ async function main() {
   
   try {
     // Attempt a simple query to verify the connection and data
+    const users = await prisma.user.count();
     const itemTypes = await prisma.itemType.findMany();
+    const collections = await prisma.collection.count();
+    const items = await prisma.item.count();
+    const tags = await prisma.tag.count();
     
     console.log("✅ Database connection successful!");
-    console.log(`📦 Found ${itemTypes.length} system item types seeded in the database:`);
-    console.log(itemTypes.map(type => ` - ${type.name} (Icon: ${type.icon})`).join("\n"));
+    console.log(`📦 Seeded Record Counts:`);
+    console.log(` - Users: ${users}`);
+    console.log(` - Item Types: ${itemTypes.length}`);
+    console.log(` - Collections: ${collections}`);
+    console.log(` - Items: ${items}`);
+    console.log(` - Tags: ${tags}`);
   } catch (error) {
     console.error("❌ Failed to connect or query the database:");
     console.error(error);

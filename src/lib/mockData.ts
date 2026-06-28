@@ -1,4 +1,4 @@
-import { ItemType, Item, Collection, User } from '@/types/dashboard';
+import { ItemType, Item, Collection, User } from '../types/dashboard';
 
 export const MOCK_ITEM_TYPES: Record<string, ItemType> = {
   snippet: {
