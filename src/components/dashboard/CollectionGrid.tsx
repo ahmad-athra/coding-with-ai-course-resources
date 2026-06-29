@@ -5,6 +5,7 @@ import { Collection } from '@/types/dashboard';
 import { MOCK_ITEM_TYPES } from '@/lib/mockData';
 import { Star, FolderOpen, Calendar, ArrowRight } from 'lucide-react';
 import { DynamicIcon } from './DynamicIcon';
+import { getCollectionThemeColor } from '@/lib/utils';
 
 interface CollectionGridProps {
   collections: Collection[];
@@ -32,13 +33,8 @@ export default function CollectionGrid({
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {collections.map((col) => {
-          // Get the default item type configurations
-          const itemTypeKey = col.defaultTypeId?.replace('type-', '') || 'note';
-          const typeConfig = MOCK_ITEM_TYPES[itemTypeKey] || MOCK_ITEM_TYPES.note;
           const isSelected = activeCollectionId === col.id;
-          
-          // Compute color codes for background tints
-          const themeColor = typeConfig.color;
+          const themeColor = getCollectionThemeColor(col);
 
           return (
             <div
@@ -103,17 +99,17 @@ export default function CollectionGrid({
                 {/* Visual indicator of types inside this collection */}
                 <div className="flex items-center gap-1.5">
                   {/* Distinct item types in collection */}
-                  {Array.from(new Set(col.items.map(item => item.itemType.id))).map(typeId => {
-                    const matchedType = Object.values(MOCK_ITEM_TYPES).find(t => t.id === typeId);
-                    if (!matchedType) return null;
+                  {Array.from(
+                    new Map(col.items.map(item => [item.itemType.id, item.itemType])).values()
+                  ).map(itemType => {
                     return (
                       <div 
-                        key={typeId} 
+                        key={itemType.id} 
                         className="p-1 rounded-sm"
-                        style={{ color: matchedType.color }}
-                        title={matchedType.name}
+                        style={{ color: itemType.color }}
+                        title={itemType.name}
                       >
-                        <DynamicIcon name={matchedType.icon} className="h-3 w-3" />
+                        <DynamicIcon name={itemType.icon} className="h-3 w-3" />
                       </div>
                     );
                   })}

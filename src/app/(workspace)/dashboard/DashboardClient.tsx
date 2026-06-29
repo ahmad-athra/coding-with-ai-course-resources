@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useMemo } from 'react';
-import { useDashboardContext } from '@/context/DashboardContext';
+import { useDashboardContext, singularToPluralType } from '@/context/DashboardContext';
 import CollectionGrid from '@/components/dashboard/CollectionGrid';
 import ItemGrid from '@/components/dashboard/ItemGrid';
 import { 
@@ -17,6 +17,16 @@ import {
 } from 'lucide-react';
 import { MOCK_USER, MOCK_ITEM_TYPES } from '@/lib/mockData';
 import { DynamicIcon } from '@/components/dashboard/DynamicIcon';
+import { getCollectionThemeColor } from '@/lib/utils';
+import Link from 'next/link';
+import {
+  Breadcrumb,
+  BreadcrumbList,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from '@/components/ui/breadcrumb';
 
 interface DashboardItemCardProps {
   item: any;
@@ -245,7 +255,7 @@ export default function DashboardClient() {
 
             {/* Favorite Items */}
             <button 
-              onClick={() => setActiveFilter({ type: 'favorites' })}
+              onClick={() => setActiveFilter({ type: 'favorite_items' })}
               className="text-left cursor-pointer group bg-zinc-900/30 border border-zinc-800/80 rounded-xl p-5 hover:border-zinc-700/80 hover:bg-zinc-900/45 transition-all duration-300 relative overflow-hidden focus:outline-hidden focus:ring-1 focus:ring-amber-500"
             >
               <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/5 rounded-full blur-2xl group-hover:bg-amber-500/10 transition-colors" />
@@ -467,7 +477,7 @@ export default function DashboardClient() {
 
                 <div className="space-y-3">
                   {recentCollections.map((col) => {
-                    const typeColor = MOCK_ITEM_TYPES[col.defaultTypeId?.replace('type-', '') || 'note']?.color || '#a1a1aa';
+                    const typeColor = getCollectionThemeColor(col);
                     return (
                       <div
                         key={col.id}
@@ -501,36 +511,80 @@ export default function DashboardClient() {
       ) : (
         /* Regular list views (grids for search, active filters, or View All view) */
         <div className="space-y-8 animate-fade-in">
-          {/* Active Filter Title */}
+          {/* Active Filter Title (Breadcrumbs) */}
           {activeFilter.type !== 'all' && (
             <div className="flex items-center justify-between pb-3 border-b border-zinc-800/40">
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-zinc-400">Viewing:</span>
-                <span className="text-sm font-semibold text-white capitalize bg-zinc-900 border border-zinc-800 px-3 py-1 rounded-lg">
-                  {activeFilter.type === 'collection' 
-                    ? collections.find(c => c.id === activeFilter.value)?.name 
-                    : activeFilter.type === 'favorite_collections'
-                    ? 'Favorite Collections'
-                    : activeFilter.type === 'collections'
-                    ? 'All Collections'
-                    : activeFilter.type === 'items'
-                    ? 'All Items'
-                    : activeFilter.type === 'pinned'
-                    ? 'Pinned Items'
-                    : activeFilter.value || activeFilter.type}
-                </span>
-                
-                {/* Clear filters button */}
-                <button 
-                  onClick={() => {
-                    setActiveFilter({ type: 'all' });
-                  }}
-                  className="text-xs text-zinc-500 hover:text-zinc-300 font-medium flex items-center gap-1 ml-2 px-2.5 py-1 rounded hover:bg-zinc-900 border border-transparent hover:border-zinc-800 transition-all cursor-pointer"
-                >
-                  <X className="h-3 w-3" />
-                  <span>Clear Filter</span>
-                </button>
-              </div>
+              <Breadcrumb>
+                <BreadcrumbList className="text-xs sm:text-sm">
+                  <BreadcrumbItem>
+                    <BreadcrumbLink render={<Link href="/dashboard" />}>
+                      Dashboard
+                    </BreadcrumbLink>
+                  </BreadcrumbItem>
+                  
+                  {activeFilter.type === 'collection' ? (
+                    (() => {
+                      const selectedCol = collections.find(c => c.id === activeFilter.value);
+                      const isFromFavorites = activeFilter.from === 'favorite_collections';
+                      return (
+                        <>
+                          <BreadcrumbSeparator />
+                          <BreadcrumbItem>
+                            {isFromFavorites ? (
+                              <BreadcrumbLink render={<Link href="/dashboard?filter=favorite_collections" />}>
+                                Favorite Collections
+                              </BreadcrumbLink>
+                            ) : (
+                              <BreadcrumbLink render={<Link href="/dashboard?filter=collections" />}>
+                                Collections
+                              </BreadcrumbLink>
+                            )}
+                          </BreadcrumbItem>
+                          <BreadcrumbSeparator />
+                          <BreadcrumbItem>
+                            <BreadcrumbPage>
+                              {selectedCol?.name || 'Collection'}
+                            </BreadcrumbPage>
+                          </BreadcrumbItem>
+                        </>
+                      );
+                    })()
+                  ) : (
+                    <>
+                      <BreadcrumbSeparator />
+                      <BreadcrumbItem>
+                        <BreadcrumbPage>
+                          {activeFilter.type === 'collections'
+                            ? 'All Collections'
+                            : activeFilter.type === 'favorite_collections'
+                            ? 'Favorite Collections'
+                            : activeFilter.type === 'items'
+                            ? 'All Items'
+                            : activeFilter.type === 'pinned'
+                            ? 'Pinned Items'
+                            : activeFilter.type === 'favorites'
+                            ? 'Favorites'
+                            : activeFilter.type === 'favorite_items'
+                            ? 'Favorite Items'
+                            : activeFilter.type === 'type' && activeFilter.value
+                            ? singularToPluralType(activeFilter.value)
+                            : activeFilter.value || activeFilter.type}
+                        </BreadcrumbPage>
+                      </BreadcrumbItem>
+                    </>
+                  )}
+                </BreadcrumbList>
+              </Breadcrumb>
+              
+              <button 
+                onClick={() => {
+                  setActiveFilter({ type: 'all' });
+                }}
+                className="text-xs text-zinc-500 hover:text-zinc-300 font-medium flex items-center gap-1 px-2.5 py-1 rounded hover:bg-zinc-900 border border-transparent hover:border-zinc-800 transition-all cursor-pointer"
+              >
+                <X className="h-3 w-3" />
+                <span>Clear Filter</span>
+              </button>
             </div>
           )}
 

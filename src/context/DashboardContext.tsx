@@ -39,8 +39,9 @@ export const singularToPluralType = (singular: string): string => {
 };
 
 interface ActiveFilter {
-  type: 'all' | 'favorites' | 'type' | 'collection' | 'pinned' | 'collections' | 'items' | 'favorite_collections';
+  type: 'all' | 'favorites' | 'type' | 'collection' | 'pinned' | 'collections' | 'items' | 'favorite_collections' | 'favorite_items';
   value?: string;
+  from?: string;
 }
 
 export interface ConfirmDialogState {
@@ -107,7 +108,10 @@ interface DashboardContextType {
 
 const DashboardContext = createContext<DashboardContextType | undefined>(undefined);
 
-export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const DashboardProvider: React.FC<{ children: React.ReactNode; initialCollections?: Collection[] }> = ({ 
+  children,
+  initialCollections = []
+}) => {
   const pathname = usePathname();
   const router = useRouter();
   const params = useParams();
@@ -115,7 +119,7 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   // App dataset states
   const [items, setItems] = useState<Item[]>(MOCK_ITEMS);
-  const [collections, setCollections] = useState<Collection[]>(MOCK_COLLECTIONS);
+  const [collections, setCollections] = useState<Collection[]>(initialCollections);
 
   // Filters state - derived directly from URL parameters to avoid cascading renders
   const activeFilter = useMemo<ActiveFilter>(() => {
@@ -129,6 +133,9 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     const filterParam = searchParams.get('filter');
     if (filterParam === 'favorites') {
       return { type: 'favorites' };
+    }
+    if (filterParam === 'favorite_items') {
+      return { type: 'favorite_items' };
     }
     if (filterParam === 'favorite_collections') {
       return { type: 'favorite_collections' };
@@ -145,7 +152,8 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     
     const collectionParam = searchParams.get('collection');
     if (collectionParam) {
-      return { type: 'collection', value: collectionParam };
+      const fromParam = searchParams.get('from') || undefined;
+      return { type: 'collection', value: collectionParam, from: fromParam };
     }
 
     return { type: 'all' };
@@ -182,8 +190,28 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     if (filter.type === 'type') {
       const plural = singularToPluralType(filter.value || '');
       router.push(`/items/${plural}`);
+    } else if (filter.type === 'collection') {
+      const currentFilter = searchParams.get('filter');
+      let fromQuery = '';
+      if (currentFilter === 'favorite_collections') {
+        fromQuery = '&from=favorite_collections';
+      } else if (currentFilter === 'collections') {
+        fromQuery = '&from=collections';
+      } else if (filter.from) {
+        fromQuery = `&from=${filter.from}`;
+      } else {
+        const colObj = collections.find(c => c.id === filter.value);
+        if (colObj?.isFavorite) {
+          fromQuery = '&from=favorite_collections';
+        } else {
+          fromQuery = '&from=collections';
+        }
+      }
+      router.push(`/dashboard?collection=${filter.value}${fromQuery}`);
     } else if (filter.type === 'favorites') {
       router.push('/dashboard?filter=favorites');
+    } else if (filter.type === 'favorite_items') {
+      router.push('/dashboard?filter=favorite_items');
     } else if (filter.type === 'favorite_collections') {
       router.push('/dashboard?filter=favorite_collections');
     } else if (filter.type === 'pinned') {
@@ -372,14 +400,17 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   };
 
   const handleSelectCollectionCard = (id: string) => {
-    setActiveFilter({ type: 'collection', value: id });
+    const from = activeFilter.type === 'favorite_collections' || activeFilter.type === 'collections'
+      ? activeFilter.type
+      : undefined;
+    setActiveFilter({ type: 'collection', value: id, from });
   };
 
   // Memoized Filtered & Sorted Lists
   const filteredItems = useMemo(() => {
     let itemsFiltered = [...items];
 
-    if (activeFilter.type === 'favorites') {
+    if (activeFilter.type === 'favorites' || activeFilter.type === 'favorite_items') {
       itemsFiltered = itemsFiltered.filter(i => i.isFavorite);
     } else if (activeFilter.type === 'pinned') {
       itemsFiltered = itemsFiltered.filter(i => i.isPinned);
@@ -425,7 +456,7 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       cols = cols.filter(c => c.id === activeFilter.value);
     } else if (activeFilter.type === 'collections') {
       // Keep all collections
-    } else if (activeFilter.type === 'pinned' || activeFilter.type === 'type' || activeFilter.type === 'items') {
+    } else if (activeFilter.type === 'pinned' || activeFilter.type === 'type' || activeFilter.type === 'items' || activeFilter.type === 'favorite_items') {
       return [];
     }
 

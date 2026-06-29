@@ -17,10 +17,19 @@ import {
 import { MOCK_ITEM_TYPES, MOCK_USER } from '@/lib/mockData';
 import { DynamicIcon } from './DynamicIcon';
 import { useDashboardContext, singularToPluralType } from '@/context/DashboardContext';
+import { getCollectionThemeColor } from '@/lib/utils';
 
 interface SidebarProps {
-  activeFilter: { type: 'all' | 'favorites' | 'type' | 'collection' | 'pinned' | 'collections' | 'items' | 'favorite_collections'; value?: string };
-  setActiveFilter: (filter: { type: 'all' | 'favorites' | 'type' | 'collection' | 'pinned' | 'collections' | 'items' | 'favorite_collections'; value?: string }) => void;
+  activeFilter: { 
+    type: 'all' | 'favorites' | 'type' | 'collection' | 'pinned' | 'collections' | 'items' | 'favorite_collections' | 'favorite_items'; 
+    value?: string;
+    from?: string;
+  };
+  setActiveFilter: (filter: { 
+    type: 'all' | 'favorites' | 'type' | 'collection' | 'pinned' | 'collections' | 'items' | 'favorite_collections' | 'favorite_items'; 
+    value?: string;
+    from?: string;
+  }) => void;
   isCollapsed: boolean;
   setIsCollapsed: (collapsed: boolean) => void;
   proMode: boolean;
@@ -52,8 +61,12 @@ export default function Sidebar({
     .substring(0, 2)
     .toUpperCase();
 
-  const handleFilterClick = (type: 'all' | 'favorites' | 'type' | 'collection', value?: string) => {
-    setActiveFilter({ type, value });
+  const handleFilterClick = (
+    type: 'all' | 'favorites' | 'type' | 'collection' | 'pinned' | 'collections' | 'items' | 'favorite_collections',
+    value?: string,
+    from?: string
+  ) => {
+    setActiveFilter({ type, value, from });
     setMobileOpen(false); // Close drawer on mobile click
   };
 
@@ -137,7 +150,7 @@ export default function Sidebar({
           </Link>
           
           <Link
-            href="/dashboard"
+            href="/dashboard?filter=favorites"
             onClick={() => handleFilterClick('favorites')}
             className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
               activeFilter.type === 'favorites'
@@ -214,13 +227,13 @@ export default function Sidebar({
               ) : (
                 favoriteCollections.map((col) => {
                   const isSelected = activeFilter.type === 'collection' && activeFilter.value === col.id;
-                  const typeColor = MOCK_ITEM_TYPES[col.defaultTypeId?.replace('type-', '') || 'note']?.color || '#a1a1aa';
+                  const typeColor = getCollectionThemeColor(col);
                   
                   return (
                     <Link
                       key={col.id}
-                      href="/dashboard"
-                      onClick={() => handleFilterClick('collection', col.id)}
+                      href={`/dashboard?collection=${col.id}&from=favorite_collections`}
+                      onClick={() => handleFilterClick('collection', col.id, 'favorite_collections')}
                       className={`w-full flex items-center gap-3 px-3 py-1.5 rounded-lg text-sm font-medium transition-all text-left ${
                         isSelected
                           ? 'bg-zinc-800/80 text-white font-semibold'
@@ -268,13 +281,13 @@ export default function Sidebar({
               ) : (
                 recentCollections.map((col) => {
                   const isSelected = activeFilter.type === 'collection' && activeFilter.value === col.id;
-                  const typeColor = MOCK_ITEM_TYPES[col.defaultTypeId?.replace('type-', '') || 'note']?.color || '#a1a1aa';
+                  const typeColor = getCollectionThemeColor(col);
                   
                   return (
                     <Link
                       key={col.id}
-                      href="/dashboard"
-                      onClick={() => handleFilterClick('collection', col.id)}
+                      href={`/dashboard?collection=${col.id}&from=collections`}
+                      onClick={() => handleFilterClick('collection', col.id, 'collections')}
                       className={`w-full flex items-center gap-3 px-3 py-1.5 rounded-lg text-sm font-medium transition-all text-left ${
                         isSelected
                           ? 'bg-zinc-800/80 text-white font-semibold'
